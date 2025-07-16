@@ -1,0 +1,64 @@
+local p = game.Players.LocalPlayer
+repeat task.wait() until p.Character and p.Character:FindFirstChild("Humanoid") and p:FindFirstChild("PlayerGui")
+local c = p.Character
+local guiParent = p.PlayerGui
+
+print("[JayArms] Script started")
+
+local o, active = {}, false
+
+local gui = Instance.new("ScreenGui", guiParent)
+gui.Name = "JayArmsGui"
+gui.ResetOnSpawn = false
+
+local btn = Instance.new("TextButton", gui)
+btn.Size = UDim2.new(0, 150, 0, 50)
+btn.Position = UDim2.new(0, 10, 0, 10)
+btn.Text = "Toggle Long Arms"
+btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+
+btn.MouseButton1Click:Connect(function()
+    active = not active
+    print("[JayArms] Button clicked. Active:", active)
+    if active then
+        for _, partName in ipairs({"Left Arm", "Right Arm", "LeftUpperArm", "RightUpperArm"}) do
+            local part = c:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                if not o[partName] then
+                    o[partName] = part.Size
+                    print("[JayArms] Saved size for:", partName)
+                end
+                local origSize = o[partName]
+                local newSize = Vector3.new(origSize.X, origSize.Y * 5, origSize.Z)
+                local offset = (newSize.Y - origSize.Y) / 2
+                part.Size = newSize
+                part.Transparency = 1
+                for _, child in pairs(part:GetChildren()) do
+                    if child:IsA("Motor6D") then
+                        child.C0 = child.C0 * CFrame.new(0, offset, 0)
+                    end
+                end
+                print("[JayArms] Stretched:", partName)
+            else
+                print("[JayArms] Missing part:", partName)
+            end
+        end
+    else
+        for partName, origSize in pairs(o) do
+            local part = c:FindFirstChild(partName)
+            if part then
+                part.Size = origSize
+                part.Transparency = 0
+                for _, child in pairs(part:GetChildren()) do
+                    if child:IsA("Motor6D") then
+                        child.C0 = CFrame.new()
+                    end
+                end
+                print("[JayArms] Reset:", partName)
+            end
+        end
+        o = {}
+    end
+end)
+
+print("[JayArms] Script ready. Click the button to toggle long arms.")
