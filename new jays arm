@@ -1,0 +1,103 @@
+local p = game.Players.LocalPlayer
+repeat task.wait() until p.Character and p:FindFirstChild("PlayerGui") and p.Character:FindFirstChild("Humanoid")
+local c = p.Character
+local guiParent = p.PlayerGui
+local o, active = {}, false
+local multiplier = 3
+
+-- ⚠️ Warning popup
+local warnGui = Instance.new("ScreenGui", guiParent)
+warnGui.Name = "JayWarning"
+warnGui.ResetOnSpawn = false
+
+local warn = Instance.new("TextLabel", warnGui)
+warn.Size = UDim2.new(0.5, 0, 0.1, 0)
+warn.Position = UDim2.new(0.25, 0, 0.4, 0)
+warn.BackgroundColor3 = Color3.new(1, 0.9, 0.2)
+warn.TextColor3 = Color3.new(0, 0, 0)
+warn.TextScaled = true
+warn.Font = Enum.Font.FredokaOne
+warn.Text = "⚠️ WARNING: 6 or higher may fling you when you dive. Use at risk."
+
+task.delay(5, function()
+	warnGui:Destroy()
+end)
+
+-- 🧠 Main GUI
+local gui = Instance.new("ScreenGui", guiParent)
+gui.Name = "JayArmsGui"
+gui.ResetOnSpawn = false
+
+-- 🟦 Odell toggle
+local btn = Instance.new("ImageButton", gui)
+btn.Size = UDim2.new(0, 40, 0, 40)
+btn.Position = UDim2.new(0, 10, 0, 10)
+btn.BackgroundTransparency = 1
+btn.Image = "https://i.imgur.com/YXktC3w.png" -- Odell icon
+btn.Active = true
+btn.Draggable = true
+
+-- 🔢 Input box
+local box = Instance.new("TextBox", gui)
+box.Size = UDim2.new(0, 60, 0, 25)
+box.Position = UDim2.new(0, 55, 0, 15)
+box.PlaceholderText = "Size"
+box.Text = ""
+box.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+box.TextColor3 = Color3.fromRGB(0, 0, 0)
+box.ClearTextOnFocus = false
+
+box.FocusLost:Connect(function()
+	local num = tonumber(box.Text)
+	if num and num > 0 then
+		multiplier = num
+	end
+end)
+
+-- 🦾 Stretch
+local function stretch(mult)
+	for _, name in {"Left Arm", "Right Arm", "LeftUpperArm", "RightUpperArm"} do
+		local part = c:FindFirstChild(name)
+		if part and part:IsA("BasePart") then
+			if not o[name] then o[name] = part.Size end
+			local s = o[name]
+			local newSize = Vector3.new(s.X, s.Y * mult, s.Z)
+			local offset = (newSize.Y - s.Y) / 2
+			part.Size = newSize
+			part.Transparency = 1
+			for _, child in pairs(part:GetChildren()) do
+				if child:IsA("Motor6D") then
+					child.C0 = child.C0 * CFrame.new(0, offset, 0)
+				end
+			end
+		end
+	end
+end
+
+-- 🔁 Reset
+local function reset()
+	for name, s in pairs(o) do
+		local part = c:FindFirstChild(name)
+		if part then
+			part.Size = s
+			part.Transparency = 0
+			for _, child in pairs(part:GetChildren()) do
+				if child:IsA("Motor6D") then
+					child.C0 = CFrame.new()
+				end
+			end
+		end
+	end
+	o = {}
+	active = false
+end
+
+-- 🖱️ Toggle logic
+btn.MouseButton1Click:Connect(function()
+	active = not active
+	if active then
+		stretch(multiplier)
+	else
+		reset()
+	end
+end)
