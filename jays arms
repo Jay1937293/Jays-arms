@@ -1,0 +1,148 @@
+-- Jay's Arms (Both Arms Fixed)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
+
+print("[JayArms] Injection started")
+
+-- Wait for character
+local function waitForChar()
+	repeat task.wait() until LP and LP.Character and LP.Character:FindFirstChildWhichIsA("Humanoid")
+	repeat task.wait() until LP.Character:FindFirstChild("Left Arm") or LP.Character:FindFirstChild("LeftUpperArm")
+end
+
+waitForChar()
+
+-- Stretch logic
+local originalSizes = {}
+local function stretchArms(mult)
+	local Char = LP.Character
+	local parts = {}
+	local isR15 = Char:FindFirstChild("LeftUpperArm") and Char:FindFirstChild("RightUpperArm")
+	if isR15 then
+		parts = {"LeftUpperArm", "RightUpperArm"}
+	else
+		parts = {"Left Arm", "Right Arm"}
+	end
+
+	for _, name in ipairs(parts) do
+		local arm = Char:FindFirstChild(name)
+		if arm and arm:IsA("BasePart") then
+			if not originalSizes[name] then originalSizes[name] = arm.Size end
+			local oldSize = originalSizes[name]
+			local newSize = Vector3.new(arm.Size.X, oldSize.Y * mult, arm.Size.Z)
+			local delta = (newSize.Y - oldSize.Y) / 2
+
+			arm.Size = newSize
+
+			-- Adjust weld position
+			for _, weld in ipairs(arm:GetChildren()) do
+				if weld:IsA("Motor6D") then
+					local direction = (name:find("Left") and -1 or 1)
+					weld.C0 = weld.C0 * CFrame.new(0, delta, 0)
+				end
+			end
+		end
+	end
+end
+
+local function resetArms()
+	local Char = LP.Character
+	for name, size in pairs(originalSizes) do
+		local arm = Char:FindFirstChild(name)
+		if arm and arm:IsA("BasePart") then
+			arm.Size = size
+			for _, weld in ipairs(arm:GetChildren()) do
+				if weld:IsA("Motor6D") then
+					weld.C0 = CFrame.new()
+				end
+			end
+		end
+	end
+	originalSizes = {}
+end
+
+-- GUI
+local gui = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
+gui.Name = "JayArmsGui"
+gui.ResetOnSpawn = false
+
+-- Toggle Button
+local toggle = Instance.new("TextButton", gui)
+toggle.Size = UDim2.new(0, 120, 0, 40)
+toggle.Position = UDim2.new(0, 10, 0, 10)
+toggle.Text = "Jay’s Arms 🦍"
+toggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
+toggle.TextColor3 = Color3.new(1,1,1)
+
+-- Main Frame (hidden at start)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 220, 0, 160)
+frame.Position = UDim2.new(0, 10, 0, 60)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.Visible = false
+
+-- Draggable
+UIS.InputBegan:Connect(function(inp, gpe)
+	if gpe then return end
+	if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
+		local startPos = inp.Position
+		local startGuiPos = frame.Position
+		local conn
+		conn = UIS.InputChanged:Connect(function(move)
+			if move.UserInputType == inp.UserInputType then
+				local delta = move.Position - startPos
+				frame.Position = UDim2.new(startGuiPos.X.Scale, startGuiPos.X.Offset + delta.X, startGuiPos.Y.Scale, startGuiPos.Y.Offset + delta.Y)
+			end
+		end)
+		UIS.InputEnded:Connect(function(endInp)
+			if endInp == inp and conn then conn:Disconnect() end
+		end)
+	end
+end)
+
+-- TextBox input
+local box = Instance.new("TextBox", frame)
+box.Size = UDim2.new(0, 200, 0, 40)
+box.Position = UDim2.new(0, 10, 0, 10)
+box.PlaceholderText = "Stretch amount (e.g. 3.5)"
+box.Text = ""
+box.TextColor3 = Color3.new(1,1,1)
+box.BackgroundColor3 = Color3.fromRGB(40,40,40)
+
+-- Apply Button
+local applyBtn = Instance.new("TextButton", frame)
+applyBtn.Size = UDim2.new(0, 90, 0, 40)
+applyBtn.Position = UDim2.new(0, 10, 0, 60)
+applyBtn.Text = "Apply"
+applyBtn.TextColor3 = Color3.new(1,1,1)
+applyBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+-- Reset Button
+local resetBtn = Instance.new("TextButton", frame)
+resetBtn.Size = UDim2.new(0, 90, 0, 40)
+resetBtn.Position = UDim2.new(0, 120, 0, 60)
+resetBtn.Text = "Reset"
+resetBtn.TextColor3 = Color3.new(1,1,1)
+resetBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+-- Toggle
+toggle.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+-- Stretch button
+applyBtn.MouseButton1Click:Connect(function()
+	local val = tonumber(box.Text)
+	if val and val > 0 then
+		stretchArms(val)
+	end
+end)
+
+-- Reset button
+resetBtn.MouseButton1Click:Connect(function()
+	resetArms()
+end)
+
+print("[JayArms] Fully loaded & both arms active ✅")
